@@ -8,10 +8,10 @@
 // You can also remove this file if you'd prefer not to use a
 // service worker, and the Workbox build step will be skipped.
 
-import { clientsClaim } from 'workbox-core';
+import { RouteHandler, clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
-import { registerRoute } from 'workbox-routing';
+import { registerRoute, Router } from 'workbox-routing';
 import { StaleWhileRevalidate } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope;
@@ -68,6 +68,83 @@ registerRoute(
     ],
   })
 );
+
+const requestHandler: RouteHandler = async ({url, request, event, params}) => {
+  const response = await fetch(request);
+  const responseBody = await response.json();
+  console.log(response)
+  console.log(responseBody)
+  return new Response(JSON.stringify(responseBody), {
+    headers: response.headers,
+  });
+}
+
+// An example runtime caching route for requests that aren't handled by the
+// precache, in this case same-origin .png requests like those from in public/
+// self -> fetch
+// registerRoute(
+//  ({url, request, event}) => { // 
+//   return url.href === 'https://jsonplaceholder.typicode.com/todos/1' 
+//  }, 
+//  requestHandler
+// );
+
+const router = new Router();
+const CacheKey = 'my-cache'
+const tryNetwork = (req: Request, timeout: number): Promise<Response> => {
+  // console.log(req)
+return new Promise((resolve, reject) => {
+  const timeoutId = setTimeout(reject, timeout);
+  fetch(req).then((res) => {
+    // если запрос выполнился успешно, отменяем таймаут
+    clearTimeout(timeoutId);
+    // клонируем полученный ответ от сервера 
+    // нужно сделать один раз, потому что поток ответа можно получить один раз
+    // сам ответ возвращается ...
+    const responseClone = res.clone();
+    // ... а клонированое знаечение кладем в кэш
+    // открываем кэш хранилище по ключу
+    caches.open(CacheKey).then((cache) => {
+      // сохраняем в кэш хранилище клонированный ответ от сервера
+      cache.put(req, responseClone)
+    })
+    // возвращаем ответ от сервера
+    resolve(res);
+    // Reject also if network fetch rejects.
+  }).catch(e => e)
+});
+};
+
+// получение ресурсов из кэша
+const getFromCache = (req: Request) => {
+console.log('network is off so getting from cache...')
+// открываем хранилище по ключу
+return caches.open(CacheKey).then((cache) => {
+  // ищем в кэше результат по значению запроса
+  return cache.match(req).then((result) => {
+    // если результат удалось найти, возвращаем его в браузер
+    // если нет - возвращаем зареджекченный промис
+    // все обработчики сервис ворке ожидают промис
+    return result || Promise.reject("no-match");
+  });
+});
+};
+
+self.addEventListener('fetch', event => {
+  event.respondWith(tryNetwork(event.request, 400).catch(() => getFromCache(event.request)));
+  // const {request} = event;
+  // const responsePromise = router.handleRequest({
+  //   event,
+  //   request,
+  // });
+  // if (responsePromise) {
+  //   // Router found a route to handle the request.
+  //   event.respondWith(responsePromise);
+  // } else {
+  //   // No route was found to handle the request.
+  // }
+});
+
 
 // This allows the web app to trigger skipWaiting via
 // registration.waiting.postMessage({type: 'SKIP_WAITING'})
