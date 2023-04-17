@@ -92,6 +92,7 @@ const requestHandler: RouteHandler = async ({url, request, event, params}) => {
 const router = new Router();
 const CacheKey = 'my-cache'
 const tryNetwork = (req: Request, timeout: number): Promise<Response> => {
+  console.log('req: ', req)
   // console.log(req)
 return new Promise((resolve, reject) => {
   const timeoutId = setTimeout(reject, timeout);
@@ -102,7 +103,7 @@ return new Promise((resolve, reject) => {
     // нужно сделать один раз, потому что поток ответа можно получить один раз
     // сам ответ возвращается ...
     const responseClone = res.clone();
-    // ... а клонированое знаечение кладем в кэш
+    // ... клонированое знаечение кладем в кэш
     // открываем кэш хранилище по ключу
     caches.open(CacheKey).then((cache) => {
       // сохраняем в кэш хранилище клонированный ответ от сервера

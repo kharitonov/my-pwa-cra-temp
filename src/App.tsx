@@ -18,6 +18,7 @@ function App() {
       <h1>Hello World</h1>
       <h2>{user}</h2>
       <h2>{user1}</h2>
+      <img src={logo} alt="logo" width="300px" height="300px" />
     </div>
   );
 }
