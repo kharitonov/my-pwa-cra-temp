@@ -19,6 +19,8 @@ function App() {
       <h2>{user}</h2>
       <h2>{user1}</h2>
       <img src={logo} alt="logo" width="300px" height="300px" />
+      <br />
+      <img src="https://static.independent.co.uk/2021/12/07/10/PRI213893584.jpg?width=1200" alt="logo" width="400px" height="300px" />
     </div>
   );
 }
